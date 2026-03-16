@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,32 +33,38 @@ public class AuthController {
     private final UserService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<JwtResponseDTO>> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
+    public ResponseEntity<ApiResponse<?>> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
         log.info("Login attempt for email: {}", loginRequest.getEmail());
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
+            );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
 
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
-        JwtResponseDTO jwtResponse = JwtResponseDTO.builder()
-                .token(jwt)
-                .type("Bearer")
-                .id(userPrincipal.getId())
-                .email(userPrincipal.getEmail())
-                .name(userPrincipal.getName())
-                .role(userPrincipal.getAuthorities().iterator().next().getAuthority())
-                .build();
+            JwtResponseDTO jwtResponse = JwtResponseDTO.builder()
+                    .token(jwt)
+                    .type("Bearer")
+                    .id(userPrincipal.getId())
+                    .email(userPrincipal.getEmail())
+                    .name(userPrincipal.getName())
+                    .role(userPrincipal.getAuthorities().iterator().next().getAuthority())
+                    .build();
 
-        log.info("User logged in successfully: {}", loginRequest.getEmail());
-        return ResponseEntity.ok(new ApiResponse<>("Login successful", jwtResponse));
+            log.info("User logged in successfully: {}", loginRequest.getEmail());
+            return ResponseEntity.ok(new ApiResponse<>("Login successful", jwtResponse));
+        } catch (AuthenticationException e) {
+            log.warn("Login failed for email: {}: {}", loginRequest.getEmail(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>("Invalid email or password", null));
+        }
     }
 
     @PostMapping("/register")
