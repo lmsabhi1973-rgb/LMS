@@ -64,6 +64,10 @@ public class AuthController {
             log.warn("Login failed for email: {}: {}", loginRequest.getEmail(), e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ApiResponse<>("Invalid email or password", null));
+        } catch (Exception e) {
+            log.error("Unexpected error during login for email: {}: {}", loginRequest.getEmail(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Login failed: " + e.getMessage(), null));
         }
     }
 
