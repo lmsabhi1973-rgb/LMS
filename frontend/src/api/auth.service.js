@@ -3,7 +3,6 @@ import { API_BASE_URL } from "./constant";
 async function login(email, password) {
   try {
 
-        console.login("Login response:",);
 
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
